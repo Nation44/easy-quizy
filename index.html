@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net; frame-src https://accounts.google.com https://content.googleapis.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://www.googleapis.com https://content.googleapis.com https://apis.google.com https://accounts.google.com https://www.google.com https://*.googleapis.com; font-src 'self' data:;">
+    <title>Fiszki Quiz</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232980b9'/%3E%3Cpath d='M18 18h28v8H18zM18 30h20v8H18zM18 42h24v8H18z' fill='white'/%3E%3C/svg%3E" />
+    <style>
+        :root {
+            --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #2c3e50;
+            --primary: #2980b9; --accent: #27ae60; --warning: #e67e22; --danger: #c0392b; --border: #dcdde1;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { background: var(--primary); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px; }
+        .btn:hover { opacity: 0.9; }
+        .btn-success { background: var(--accent); }
+        .btn-danger { background: var(--danger); }
+        .keyword { border-bottom: 2px dotted var(--primary); cursor: help; position: relative; display: inline-block; font-weight: bold; color: var(--primary); }
+        .keyword::after {
+            content: attr(data-translate); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; z-index: 10;
+        }
+        .keyword:hover::after { opacity: 1; visibility: visible; }
+        .option-btn { display: block; width: 100%; text-align: left; padding: 12px; margin: 8px 0; border: 1px solid var(--border); background: #f9f9f9; border-radius: 6px; cursor: pointer; font-size: 15px; }
+        .option-btn:hover { background: #f1f2f6; }
+        .correct { background: #2ecc71 !important; color: white; font-weight: bold; }
+        .incorrect { background: #e74c3c !important; color: white; font-weight: bold; }
+        .tabs { display: flex; justify-content: space-around; margin-bottom: 15px; background: #e2e8f0; padding: 5px; border-radius: 8px; }
+        .tab-btn { flex: 1; background: none; border: none; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 6px; color: #4a5568; }
+        .tab-btn.active { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: var(--primary); }
+        .hidden { display: none !important; }
+        .stat-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin: 5px 5px 5px 0; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 6px 0; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+        .sync-status { font-size: 12px; font-weight: bold; float: right; padding: 4px 8px; border-radius: 4px; }
+        .status-local { background: #ffeaa7; color: #d63031; }
+        .status-cloud { background: #badc58; color: #6ab04c; }
+        .settings-toggle { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; }
+        .settings-toggle input[type="checkbox"] { width: auto; margin: 0; accent-color: var(--primary); }
+        .settings-toggle span { font-size: 14px; color: var(--text-color); }
+        .learning-section { padding: 0; overflow: hidden; }
+        .learning-section-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; background: transparent; color: var(--text-color); padding: 18px 20px; text-align: left; cursor: pointer; }
+        .learning-section-toggle:hover { background: #f8fafc; }
+        .learning-section-title { font-size: 18px; font-weight: 700; }
+        .learning-section-icon { color: var(--primary); font-size: 20px; line-height: 1; transition: transform 0.25s ease; }
+        .learning-section-toggle[aria-expanded="false"] .learning-section-icon { transform: rotate(-90deg); }
+        .learning-section-content { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.3s ease; }
+        .learning-section-content.is-collapsed { grid-template-rows: 0fr; }
+        .learning-section-content-inner { min-height: 0; overflow: hidden; padding: 0 20px 20px; }
+        .learning-section-content.is-collapsed .learning-section-content-inner { padding-bottom: 0; }
+        .learning-stats { padding-bottom: 12px; }
+        .quiz-slot:empty { display: none; }
+    </style>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <span id="sync-indicator" class="sync-status status-local">Zapis lokalny</span>
+        <h1 id="deck-header-title">Biblioteka</h1>
+        <p id="deck-header-subtitle"></p>
+    </header>
+
+    <div class="tabs" id="main-tabs">
+        <button class="tab-btn active" data-target="quiz" onclick="window.switchTab && window.switchTab('quiz')">Fiszki</button>
+        <button class="tab-btn" data-target="editor" onclick="window.switchTab && window.switchTab('editor')">Edytuj pytania</button>
+        <button class="tab-btn" data-target="settings" onclick="window.switchTab && window.switchTab('settings')">Ustawienia</button>
+    </div>
+
+    <div id="tab-quiz" class="tab-content">
+        <div class="card">
+            <h3>Status globalny:</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <span class="stat-badge" style="background:#6c5ce7; color:white;">Wszystkie: <span id="cnt-all-total">0</span></span>
+                <span class="stat-badge" style="background:#d63031; color:white;">Nieprzerobione: <span id="cnt-all-remaining">0</span></span>
+            </div>
+        </div>
+
+        <section class="card learning-section" id="daily-learning-section">
+            <button class="learning-section-toggle" type="button" aria-expanded="true" aria-controls="daily-learning-content" data-learning-section="daily">
+                <span class="learning-section-title">Dzisiejsza nauka</span>
+                <span class="learning-section-icon" aria-hidden="true">⌄</span>
+            </button>
+            <div class="learning-section-content" id="daily-learning-content">
+                <div class="learning-section-content-inner">
+                    <div class="learning-stats">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <span class="stat-badge" style="background:#3498db; color:white;">Zaplanowane: <span id="cnt-today-total">0</span></span>
+                            <span class="stat-badge" style="background:#9b59b6; color:white;">Przerobione: <span id="cnt-today-remaining">0</span></span>
+                            <span class="stat-badge" style="background:#2ecc71; color:white;">Zaliczone: <span id="cnt-correct">0</span></span>
+                            <span class="stat-badge" style="background:#e67e22; color:white;">Niezaliczone: <span id="cnt-wrong">0</span></span>
+                        </div>
+                        <button id="start-new-btn" type="button" class="btn btn-success" style="margin-top:10px; margin-left:0;">Rozpocznij naukę</button>
+                        <button id="quiz-summary" type="button" class="hidden" style="margin-top:10px; padding:8px 12px; border:none; border-radius:999px; background:#3498db; color:white; font-weight:700; cursor:default;"></button>
+                    </div>
+                    <div id="daily-quiz-slot" class="quiz-slot"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card learning-section" id="review-learning-section">
+            <button class="learning-section-toggle" type="button" aria-expanded="false" aria-controls="review-learning-content" data-learning-section="review">
+                <span class="learning-section-title">Powtórki</span>
+                <span class="learning-section-icon" aria-hidden="true">⌄</span>
+            </button>
+            <div class="learning-section-content is-collapsed" id="review-learning-content">
+                <div class="learning-section-content-inner">
+                    <div class="learning-stats">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <span class="stat-badge" style="background:#16a085; color:white;">Zaplanowane powtórki: <span id="cnt-review-planned">0</span></span>
+                            <span class="stat-badge" style="background:#0984e3; color:white;">Przerobione powtórki: <span id="cnt-review-done">0</span></span>
+                            <span class="stat-badge" style="background:#2ecc71; color:white;">Zaliczone powtórki: <span id="cnt-review-correct">0</span></span>
+                            <span class="stat-badge" style="background:#e67e22; color:white;">Niezaliczone powtórki: <span id="cnt-review-wrong">0</span></span>
+                        </div>
+                        <button id="start-review-btn" type="button" class="btn" style="margin-top:10px; margin-left:0;">Rozpocznij powtórki (<span id="cnt-review-available">0</span>)</button>
+                        <button id="toggle-db-stats-btn" type="button" class="btn" style="margin-top:10px; margin-left:0;">Pokaż stan bazy powtórek</button>
+                        <div id="db-stats-panel" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+                            <span class="stat-badge" style="background:#c0392b; color:white;">Zaległe / Dziś: <span id="cnt-db-overdue">0</span></span>
+                            <span class="stat-badge" style="background:#e67e22; color:white;">Do 7 dni: <span id="cnt-db-week">0</span></span>
+                            <span class="stat-badge" style="background:#f0932b; color:white;">8 - 30 dni: <span id="cnt-db-month">0</span></span>
+                            <span class="stat-badge" style="background:#7f8c8d; color:white;">Powyżej 30 dni: <span id="cnt-db-far">0</span></span>
+                            <div style="width:100%; padding-top:6px; border-top:1px solid var(--border);">
+                                <strong style="font-size:13px;">Doraźne powtórki przedegzaminacyjne</strong>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+                                    <button type="button" class="btn emergency-review-btn" data-review-range="overdue" style="margin:0;">Powtórz teraz: Zaległe / Dziś (<span id="emergency-overdue-count">0</span>)</button>
+                                    <button type="button" class="btn emergency-review-btn" data-review-range="week" style="margin:0;">Powtórz teraz: Do 7 dni (<span id="emergency-week-count">0</span>)</button>
+                                    <button type="button" class="btn emergency-review-btn" data-review-range="month" style="margin:0;">Powtórz teraz: 8 - 30 dni (<span id="emergency-month-count">0</span>)</button>
+                                    <button type="button" class="btn emergency-review-btn" data-review-range="far" style="margin:0;">Powtórz teraz: Powyżej 30 dni (<span id="emergency-far-count">0</span>)</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="review-quiz-slot" class="quiz-slot"></div>
+                </div>
+            </div>
+        </section>
+
+        <div id="quiz-box" class="card hidden">
+            <p id="quiz-category" style="font-size:12px; color:gray; text-transform:uppercase; font-weight:bold; margin:0;"></p>
+            <p id="quiz-number" style="font-size:12px; color:#4b5563; font-weight:600; margin:6px 0 0;"></p>
+            <h2 id="quiz-question">Ładowanie pytań...</h2>
+            <div id="quiz-options"></div>
+            <div id="quiz-feedback" class="hidden">
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
+                <p><strong>Wyjaśnienie:</strong> <span id="quiz-explanation"></span></p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success action-btn" style="flex: 1; padding: 12px;" data-action="answer-correct">Umiem</button>
+                    <button class="btn btn-danger action-btn" style="flex: 1; padding: 12px;" data-action="answer-wrong">Nie wiem</button>
+                </div>
+            </div>
+            <div id="quiz-backup-reminder" class="hidden" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+                <p style="margin:0 0 8px; font-size:14px;">Dzisiejsza pula jest ukończona. Zapisz pełną kopię postępów.</p>
+                <button class="btn btn-success" id="quiz-start-review-btn" type="button" style="margin:0 6px 0 0;">Przejdź do powtórek</button>
+                <button class="btn" id="quiz-export-full-backup-btn" type="button" style="margin:0;">Pobierz pełny backup JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-editor" class="tab-content hidden">
+        <div class="card">
+            <h3>Dodaj nowe pytanie egzaminacyjne</h3>
+            <label>Kategoria / Podsekcja IEC 62443:</label>
+            <input type="text" id="edit-cat" value="IEC 62443-4-2 / Component Requirements" maxlength="150">
+            
+            <label>Treść pytania (DE):</label>
+            <textarea id="edit-q" rows="3" maxlength="1500">Welche Komponente erfordert eine <span class="keyword" data-translate="Authentication">Authentifizierung</span> auf der ersten Stufe?</textarea>
+            
+            <label>Opcje odpowiedzi:</label>
+            <div style="display:grid; grid-template-columns: 30px 1fr; align-items: center; gap: 5px; margin-bottom: 10px;">
+                <input type="radio" name="correct-opt" value="0" checked> <input type="text" id="opt-0" value="Opcja A" maxlength="400">
+                <input type="radio" name="correct-opt" value="1"> <input type="text" id="opt-1" value="Opcja B" maxlength="400">
+                <input type="radio" name="correct-opt" value="2"> <input type="text" id="opt-2" value="Opcja C" maxlength="400">
+                <input type="radio" name="correct-opt" value="3"> <input type="text" id="opt-3" value="Opcja D" maxlength="400">
+            </div>
+
+            <label>Wyjaśnienie / Rationale:</label>
+            <textarea id="edit-exp" rows="2" maxlength="1500">Uzasadnienie...</textarea>
+            
+            <button class="btn btn-success action-btn" data-action="save-question">Zapisz pytanie do bazy</button>
+            <button class="btn hidden action-btn" data-action="cancel-edit" id="cancel-edit-btn">Anuluj edycję</button>
+        </div>
+        <div class="card">
+            <h3>Baza pytań w systemie (<span id="total-questions-cnt">0</span>)</h3>
+            <div id="questions-list" style="max-height: 250px; overflow-y: auto; font-size:13px; border: 1px solid var(--border); padding: 10px; border-radius: 4px;"></div>
+        </div>
+    </div>
+
+    <div id="tab-settings" class="tab-content hidden">
+        <div class="card">
+            <h3>Automatyczna Kopia Zapasowa w Chmurze Google</h3>
+            <button id="auth-btn" class="btn btn-success action-btn" data-action="google-login">Zaloguj się przez Google</button>
+            <button id="signout-btn" class="btn btn-danger hidden action-btn" data-action="google-logout">Wyloguj z Google Drive</button>
+            <button id="sync-btn" class="btn action-btn" data-action="sync-cloud" type="button">Synchronizuj teraz</button>
+            <p id="cloud-info" style="font-size:12px; color:gray; margin-top:5px;">Status chmury: Niepołączono</p>
+        </div>
+        <div class="card">
+            <h3>Ustawienia Algorytmu Powtórek</h3>
+            <label>Maksymalna liczba powtórek z poprzednich dni na dziś:</label>
+            <input type="number" id="cfg-max-review" value="10" min="0" max="100">
+            
+            <label style="margin-top: 10px; display: block;">Maksymalna liczba NOWYCH słówek na dzień:</label>
+            <input type="number" id="cfg-max-new" value="4" min="0" max="100">
+
+            <label style="margin-top: 10px; display: block;">Biblioteka / zestaw fiszek:</label>
+            <select id="cfg-deck-select"></select>
+            <button class="btn" id="new-deck-btn" type="button" style="margin-left:0; margin-top:6px;">Nowa biblioteka</button>
+            <input type="text" id="cfg-deck-name" placeholder="Nazwa biblioteki" style="margin-top:8px;">
+            <label class="settings-toggle" for="cfg-randomize-questions">
+                <input type="checkbox" id="cfg-randomize-questions" checked>
+                <span>Losuj pytania w tej bibliotece</span>
+            </label>
+        </div>
+        <div class="card">
+            <h3>Eksport pojedynczej biblioteki</h3>
+            <button class="btn action-btn" data-action="export-json">Eksportuj postępy do pliku JSON</button>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
+            <label>Importuj bazę z pliku JSON (Max 5MB):</label>
+            <input type="file" id="import-file" accept=".json">
+            <div style="margin-top:12px; padding:10px; background:#f8fafc; border:1px solid var(--border); border-radius:6px; font-size:13px; line-height:1.5;">
+                <strong>Format nowych pytań w JSON:</strong><br>
+                <code style="display:block; white-space:pre-wrap; word-break:break-word; margin-top:6px;">{
+  "questions": [
+    {
+      "id": "q_001",
+      "category": "IEC 62443 / Terminology",
+      "question": "Jak nazywa się ... ?",
+      "options": [
+        { "text": "Opcja A", "isCorrect": false },
+        { "text": "Opcja B", "isCorrect": true },
+        { "text": "Opcja C", "isCorrect": false },
+        { "text": "Opcja D", "isCorrect": false }
+      ],
+      "explanation": "Wyjaśnienie odpowiedzi",
+      "interval": 0,
+      "nextReviewDate": "2026-07-28",
+      "repetitions": 0
+    }
+  ]
+}</code>
+                <div style="margin-top:8px; color:#4b5563;">ID musi być unikalne w danej bibliotece. Jeśli takie ID już istnieje, aplikacja automatycznie zmieni je na unikalną wersję podczas importu.</div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Wgrane zestawy JSON</h3>
+            <div id="imported-sets-list" style="font-size:13px;"></div>
+        </div>
+        <div class="card">
+            <h3>Pełna kopia zapasowa</h3>
+            <p style="font-size:13px; color:#4b5563; margin-top:0;">Obejmuje wszystkie biblioteki, ich ustawienia, interwały powtórek oraz stan bieżących sesji.</p>
+            <button class="btn" id="export-full-backup-btn" type="button">Pobierz pełny backup JSON</button>
+            <label style="margin-top:12px; display:block;">Przywróć pełny backup JSON:</label>
+            <input type="file" id="import-full-backup-file" accept=".json">
+        </div>
+        <div class="card">
+            <h3>Reset postępów</h3>
+            <p style="font-size:13px; color:#4b5563; margin-top:0;">Zresetuje historię i statystyki dla obecnej biblioteki, ale nie usunie samych pytań.</p>
+            <button class="btn btn-danger" id="reset-progress-btn" type="button">Resetuj postępy</button>
+        </div>
+        <div class="card">
+            <h3>Usuń bibliotekę</h3>
+            <p style="font-size:13px; color:#4b5563; margin-top:0;">Usunie wybraną bibliotekę wraz z jej pytaniami.</p>
+            <button class="btn btn-danger" id="delete-deck-btn" type="button">Usuń aktualną bibliotekę</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+<script>
+    // Wklej własny Client ID oraz API Key z Google Cloud Console tutaj.
+    const CLIENT_ID = '464439706436-edr1takupdcuei0geimpidea6s79q204.apps.googleusercontent.com';
+    const API_KEY = 'AIzaSyBvTJYnGhKH0ySV7SiB3PIDIikX08aAlIg';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email';
+    const CLOUD_FILE_NAME = `fiszki-quiz-data-${CLIENT_ID.split('.')[0]}.json`;
+    const CLOUD_SESSION_KEY = 'cloud_sync_state';
+
+    let cloudStorage = (function() {
+        let _tokenClient = null;
+        let _cloudFileId = null;
+        let _isCloudActive = false;
+        let _cloudUser = '';
+        let _accessToken = null;
+        return {
+            setClient: (client) => { _tokenClient = client; }, getClient: () => _tokenClient,
+            setActive: (state) => { _isCloudActive = state; }, isActive: () => _isCloudActive,
+            setFileId: (id) => { _cloudFileId = id; }, getFileId: () => _cloudFileId,
+            setUser: (user) => { _cloudUser = user; }, getUser: () => _cloudUser,
+            setAccessToken: (token) => { _accessToken = token; }, getAccessToken: () => _accessToken,
+            clearSession: () => { _accessToken = null; _cloudFileId = null; _isCloudActive = false; _cloudUser = ''; }
+        };
+    })();
+
+    let pendingCloudToken = null;
+
+    function setCloudUi(message, isError = false) {
+        const info = document.getElementById('cloud-info');
+        const indicator = document.getElementById('sync-indicator');
+        const authBtn = document.getElementById('auth-btn');
+        const signoutBtn = document.getElementById('signout-btn');
+        if (info) info.textContent = message;
+        if (indicator) {
+            indicator.textContent = isError ? 'Błąd synchronizacji' : (cloudStorage.isActive() ? 'Synchronizacja z Google Drive' : 'Zapis lokalny');
+            indicator.className = `sync-status ${isError ? 'status-local' : (cloudStorage.isActive() ? 'status-cloud' : 'status-local')}`;
+        }
+        if (authBtn) authBtn.classList.toggle('hidden', cloudStorage.isActive());
+        if (signoutBtn) signoutBtn.classList.toggle('hidden', !cloudStorage.isActive());
+    }
+
+    function getGoogleErrorMessage(error) {
+        const details = error?.result?.error || error?.error || error;
+        if (typeof details === 'string') return details;
+        if (details?.message) return `${details.code ? `${details.code}: ` : ''}${details.message}`;
+        if (error?.message) return error.message;
+        try { return JSON.stringify(details); } catch (e) { return 'Nieznany błąd Google API.'; }
+    }
+
+    function persistCloudSessionState(email) {
+        if (!email) {
+            localStorage.removeItem(CLOUD_SESSION_KEY);
+            return;
+        }
+        localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify({ email, connected: true }));
+    }
+
+    function loadCloudSessionState() {
+        try {
+            const raw = localStorage.getItem(CLOUD_SESSION_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function isCloudConfigured() {
+        return !!CLIENT_ID && !CLIENT_ID.includes('PROSZE') && !!API_KEY && !API_KEY.includes('PROSZE');
+    }
+
+    async function waitForGoogleApis() {
+        if (window.google && window.gapi) return;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (window.google && window.gapi) return;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    async function setCloudAuthToken(token) {
+        cloudStorage.setAccessToken(token);
+        if (window.gapi?.client) {
+            window.gapi.client.setToken({ access_token: token });
+        }
+    }
+
+    async function resolveCloudUserEmail() {
+        if (!cloudStorage.getAccessToken()) return '';
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { Authorization: `Bearer ${cloudStorage.getAccessToken()}` }
+            });
+            if (!response.ok) return '';
+            const payload = await response.json();
+            return payload.email || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    async function initCloudStorage() {
+        await waitForGoogleApis();
+        if (!window.google?.accounts?.oauth2 || !window.gapi?.load) {
+            setCloudUi('Google API nie jest jeszcze gotowe. Odśwież stronę lub spróbuj ponownie.', true);
+            return;
+        }
+        if (!isCloudConfigured()) {
+            setCloudUi('Wklej własny Client ID i API Key z Google Cloud Console, aby włączyć synchronizację.', true);
+            return;
+        }
+
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (response) => {
+                if (response.error) {
+                    if (pendingCloudToken) pendingCloudToken.reject(new Error(response.error));
+                    setCloudUi(`Błąd logowania: ${response.error}`, true);
+                    return;
+                }
+                setCloudAuthToken(response.access_token);
+                if (pendingCloudToken) pendingCloudToken.resolve(response.access_token);
+            }
+        });
+        cloudStorage.setClient(tokenClient);
+
+        try {
+            await new Promise((resolve, reject) => {
+                window.gapi.load('client', () => {
+                    window.gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+                    }).then(resolve).catch(reject);
+                });
+            });
+        } catch (error) {
+            setCloudUi(`Błąd inicjalizacji Google Drive: ${getGoogleErrorMessage(error)}`, true);
+            return;
+        }
+
+        const storedState = loadCloudSessionState();
+        if (storedState?.connected) {
+            const email = storedState.email || '';
+            cloudStorage.setUser(email);
+            setCloudUi(`Zalogowano jako ${email || 'Google Drive'}`);
+            cloudStorage.setActive(false);
+        } else {
+            setCloudUi('Status chmury: Niepołączono');
+        }
+    }
+
+    async function requestCloudAccessToken(promptMode = 'consent') {
+        if (!cloudStorage.getClient()) throw new Error('Klient Google nie jest zainicjalizowany.');
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const timeoutId = window.setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                pendingCloudToken = null;
+                reject(new Error('Nie uzyskano odpowiedzi od Google. Sprawdź ustawienia OAuth i czy popup autoryzacji nie został zablokowany.'));
+            }, 25000);
+            pendingCloudToken = {
+                resolve: (value) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    resolve(value);
+                },
+                reject: (error) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    reject(error);
+                }
+            };
+            cloudStorage.getClient().requestAccessToken({ prompt: promptMode });
+        });
+    }
+
+    async function handleAuthClick() {
+        if (!isCloudConfigured()) {
+            setCloudUi('Wklej własny Client ID i API Key z Google Cloud Console, aby włączyć synchronizację.', true);
+            return;
+        }
+        try {
+            setCloudUi('Synchronizowanie...');
+            await requestCloudAccessToken('consent');
+            cloudStorage.setActive(true);
+            const email = await resolveCloudUserEmail();
+            cloudStorage.setUser(email);
+            persistCloudSessionState(email);
+            setCloudUi(`Zalogowano jako ${email || 'Google Drive'}`);
+            await pullDataFromCloud();
+        } catch (error) {
+            cloudStorage.setActive(false);
+            setCloudUi(`Błąd logowania: ${getGoogleErrorMessage(error)}`, true);
+        }
+    }
+
+    async function handleSignoutClick() {
+        try {
+            if (window.google?.accounts?.oauth2?.revoke) {
+                await new Promise((resolve) => {
+                    window.google.accounts.oauth2.revoke(cloudStorage.getAccessToken() || '', () => resolve());
+                });
+            }
+        } catch (e) {
+            // ignore revoke errors and keep the UI state consistent
+        }
+        cloudStorage.clearSession();
+        persistCloudSessionState('');
+        setCloudUi('Status chmury: Niepołączono');
+    }
+
+    window.handleAuthClick = handleAuthClick;
+    window.handleSignoutClick = handleSignoutClick;
+
+    async function buildCloudPayload() {
+        const [decksData, metaData, sessionsData] = await Promise.all([
+            appDB.decks.toArray(),
+            appDB.meta.toArray(),
+            appDB.sessions.toArray()
+        ]);
+        return {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            decks: decksData,
+            meta: metaData,
+            sessions: sessionsData
+        };
+    }
+
+    async function applyCloudPayload(payload) {
+        if (!payload || typeof payload !== 'object') throw new Error('Pusty lub niepoprawny plik z Google Drive.');
+        const decksData = Array.isArray(payload.decks) ? payload.decks : [];
+        const metaData = Array.isArray(payload.meta) ? payload.meta : [];
+        const sessionsData = Array.isArray(payload.sessions) ? payload.sessions : [];
+
+        await appDB.transaction('rw', appDB.decks, appDB.meta, appDB.sessions, async () => {
+            await appDB.decks.clear();
+            await appDB.meta.clear();
+            await appDB.sessions.clear();
+            if (decksData.length > 0) await appDB.decks.bulkPut(decksData);
+            if (metaData.length > 0) await appDB.meta.bulkPut(metaData);
+            if (sessionsData.length > 0) await appDB.sessions.bulkPut(sessionsData);
+        });
+
+        decks = decksData.length > 0 ? decksData : decks;
+        activeDeckId = (metaData.find(item => item.key === 'activeDeckId')?.value) || activeDeckId || decks[0]?.id || null;
+        const activeDeck = getActiveDeck();
+        db = Array.isArray(activeDeck?.questions) ? activeDeck.questions : [];
+        appSettings = activeDeck?.settings || { maxReview: 10, maxNew: 4, randomizeQuestions: true };
+        populateDeckSelector();
+        updateHeaderTitle();
+        await persistDecks();
+        await buildQueue(false);
+    }
+
+    async function pushDataToCloud() {
+        if (!cloudStorage.isActive()) return;
+        if (!isCloudConfigured()) {
+            setCloudUi('Wklej własny Client ID i API Key z Google Cloud Console, aby włączyć synchronizację.', true);
+            return;
+        }
+        try {
+            await waitForGoogleApis();
+            if (!window.gapi?.client?.drive) {
+                await new Promise((resolve, reject) => {
+                    window.gapi.load('client', () => {
+                        window.gapi.client.init({ apiKey: API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }).then(resolve).catch(reject);
+                    });
+                });
+            }
+            const payload = await buildCloudPayload();
+            const metadata = { name: CLOUD_FILE_NAME, parents: ['appDataFolder'], mimeType: 'application/json' };
+            const fileBody = JSON.stringify(payload);
+            if (cloudStorage.getAccessToken()) {
+                window.gapi.client.setToken({ access_token: cloudStorage.getAccessToken() });
+            }
+            const existingResponse = await window.gapi.client.drive.files.list({
+                spaces: 'appDataFolder',
+                q: `name = '${CLOUD_FILE_NAME.replace(/'/g, "\\'")}' and trashed = false`,
+                orderBy: 'modifiedTime desc',
+                fields: 'files(id,name,modifiedTime,capabilities/canEdit)'
+            });
+            const existingFile = existingResponse.result.files?.find(file => file.capabilities?.canEdit === true);
+            if (existingFile) {
+                try {
+                    await window.gapi.client.drive.files.update({
+                        fileId: existingFile.id,
+                        media: { mimeType: 'application/json', body: fileBody },
+                        fields: 'id,name,modifiedTime'
+                    });
+                } catch (error) {
+                    throw new Error(`Nie udało się zaktualizować backupu ${existingFile.id}: ${getGoogleErrorMessage(error)}`);
+                }
+            } else {
+                try {
+                    await window.gapi.client.drive.files.create({
+                        resource: metadata,
+                        media: { mimeType: 'application/json', body: fileBody },
+                        fields: 'id,name,modifiedTime'
+                    });
+                } catch (error) {
+                    throw new Error(`Nie udało się utworzyć nowego backupu: ${getGoogleErrorMessage(error)}`);
+                }
+            }
+            cloudStorage.setFileId(existingFile?.id || null);
+            setCloudUi(`Zsynchronizowano pomyślnie (${new Date().toLocaleString('pl-PL')})`);
+        } catch (error) {
+            setCloudUi(`Błąd synchronizacji: ${getGoogleErrorMessage(error)}`, true);
+        }
+    }
+
+    async function pullDataFromCloud() {
+        if (!cloudStorage.isActive()) return;
+        if (!isCloudConfigured()) {
+            setCloudUi('Wklej własny Client ID i API Key z Google Cloud Console, aby włączyć synchronizację.', true);
+            return;
+        }
+        try {
+            await waitForGoogleApis();
+            if (!window.gapi?.client?.drive) {
+                await new Promise((resolve, reject) => {
+                    window.gapi.load('client', () => {
+                        window.gapi.client.init({ apiKey: API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }).then(resolve).catch(reject);
+                    });
+                });
+            }
+            if (cloudStorage.getAccessToken()) {
+                window.gapi.client.setToken({ access_token: cloudStorage.getAccessToken() });
+            }
+            const response = await window.gapi.client.drive.files.list({
+                spaces: 'appDataFolder',
+                q: `name = '${CLOUD_FILE_NAME.replace(/'/g, "\\'")}' and trashed = false`,
+                orderBy: 'modifiedTime desc',
+                fields: 'files(id,name,modifiedTime)'
+            });
+            const file = response.result.files?.[0];
+            if (!file) {
+                setCloudUi('Nie znaleziono pliku synchronizacji w Google Drive.', true);
+                return;
+            }
+            const fileResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+                headers: { Authorization: `Bearer ${cloudStorage.getAccessToken()}` }
+            });
+            if (!fileResponse.ok) throw new Error(`Nie udało się pobrać danych z Google Drive (${fileResponse.status})`);
+            const payload = await fileResponse.json();
+            await applyCloudPayload(payload);
+            setCloudUi(`Pobrano dane z Google Drive (${new Date().toLocaleString('pl-PL')})`);
+        } catch (error) {
+            setCloudUi(`Błąd pobierania z Google Drive: ${getGoogleErrorMessage(error)}`, true);
+        }
+    }
+
+    function secureShuffle(array) {
+        let shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            let randomBuffer = new Uint32Array(1);
+            window.crypto.getRandomValues(randomBuffer);
+            let j = randomBuffer[0] % (i + 1);
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function getQuestionNumberLabel(question) {
+        const explicitNumber = question.questionNumber ?? question.number;
+        const questionId = String(question.id ?? '').trim();
+        const displayNumber = explicitNumber ?? (/^\d+$/.test(questionId) ? questionId : db.indexOf(question) + 1);
+        return `Numer pytania: ${displayNumber} z ${db.length}`;
+    }
+
+    function sanitizeHTML(str) {
+        if(!str || typeof str !== 'string') return "";
+
+        let cleaned = str.replace(/^\s*#{1,6}\s*/, "");
+        // parse in an inert document so no event handlers / resource loads can fire while cleaning
+        let parsedDoc = new DOMParser().parseFromString(cleaned, 'text/html');
+        let container = parsedDoc.body || document.createElement('div');
+
+        Array.from(container.querySelectorAll('*')).forEach((node) => {
+            if (node.tagName === 'SPAN' && node.classList.contains('keyword') && node.getAttribute('data-translate') !== null) {
+                const translated = (node.getAttribute('data-translate') || '').replace(/[<>"']/g, '');
+                Array.from(node.attributes).forEach(attr => node.removeAttribute(attr.name));
+                node.setAttribute('class', 'keyword');
+                node.setAttribute('data-translate', translated);
+                return;
+            }
+
+            const textNode = document.createTextNode(node.textContent || '');
+            node.replaceWith(textNode);
+        });
+
+        return container.innerHTML;
+    }
+
+    // strips all markup and returns plain text only - used to sanitize any field that must never contain HTML
+    function stripTags(str) {
+        if(!str || typeof str !== 'string') return "";
+        let parsedDoc = new DOMParser().parseFromString(str, 'text/html');
+        return ((parsedDoc.body ? parsedDoc.body.textContent : '') || '').trim();
+    }
+
+    let defaultQuestions = [
+        {
+            id: "demo_1",
+            category: "IEC 62443-1-1 / Terminology",
+            question: "Welcher Begriff beschreibt einen logischen oder physischen Pfad für den <span class='keyword' data-translate='Information Exchange'>Informationsaustausch</span> zwischen Zonen?",
+            options: [
+                { text: "Security Level", isCorrect: false },
+                { text: "Conduit (Kanal)", isCorrect: true },
+                { text: "Reference Architecture", isCorrect: false },
+                { text: "Asset Group", isCorrect: false }
+            ],
+            explanation: "Ein Conduit (Kanal) verbindet Zonen und bündelt Kommunikationsverbindungen.",
+            interval: 0, nextReviewDate: new Date().toISOString().split('T')[0], repetitions: 0,
+            totalAttempts: 0, totalCorrect: 0, lastReviewedDate: null
+        }
+    ];
+
+    // === IndexedDB (Dexie) storage layer ===
+    const appDB = new Dexie('fiszki_app_db');
+    appDB.version(1).stores({
+        decks: 'id',
+        meta: 'key',
+        sessions: 'key'
+    });
+
+    const LEGACY_DECKS_KEY = 'iec62443_quiz_decks';
+    const LEGACY_DB_KEY = 'iec62443_quiz_db';
+    const LEGACY_ACTIVE_DECK_KEY = 'iec62443_active_deck_id';
+
+    // sanitizes and backfills a question record before it's written to IndexedDB, regardless of source (import/editor/migration)
+    function sanitizeQuestionRecord(q) {
+        const rawOptions = Array.isArray(q?.options) ? q.options.slice(0, 4) : [];
+        const options = rawOptions.map(o => ({
+            text: stripTags(String(o?.text ?? '').slice(0, 400)),
+            isCorrect: !!o?.isCorrect
+        }));
+        return {
+            id: String(q?.id ?? ('q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8))),
+            category: stripTags(String(q?.category ?? '').slice(0, 150)),
+            question: sanitizeHTML(String(q?.question ?? '').slice(0, 1500)),
+            options,
+            explanation: stripTags(String(q?.explanation ?? '').slice(0, 1500)),
+            interval: Number.isFinite(q?.interval) ? q.interval : 0,
+            nextReviewDate: (typeof q?.nextReviewDate === 'string' && q.nextReviewDate) ? q.nextReviewDate : getTodayDateKey(),
+            repetitions: Number.isFinite(q?.repetitions) ? q.repetitions : 0,
+            totalAttempts: Number.isFinite(q?.totalAttempts) ? q.totalAttempts : 0,
+            totalCorrect: Number.isFinite(q?.totalCorrect) ? q.totalCorrect : 0,
+            lastReviewedDate: typeof q?.lastReviewedDate === 'string' ? q.lastReviewedDate : null,
+            sourceSetId: typeof q?.sourceSetId === 'string' ? q.sourceSetId : null
+        };
+    }
+
+    // maps an old localStorage session record onto the current session field names, best-effort
+    function migrateLegacySessionShape(old) {
+        if (!old || typeof old !== 'object') return null;
+        const newIds = Array.isArray(old.newIds) ? old.newIds : [];
+        const reviewIds = Array.isArray(old.reviewIds) ? old.reviewIds : [];
+        const attemptedIds = Array.isArray(old.currentRoundSeenIds) ? old.currentRoundSeenIds : (Array.isArray(old.seenIds) ? old.seenIds : []);
+        const correctIds = Array.isArray(old.currentRoundCorrectIds) ? old.currentRoundCorrectIds : [];
+        const wrongIds = Array.isArray(old.currentRoundWrongIds) ? old.currentRoundWrongIds : [];
+        return {
+            newIds, reviewIds, attemptedIds, correctIds, wrongIds,
+            // only ids still pending in reviewIds can be reliably classified as review-type after the fact
+            reviewAttemptedIds: attemptedIds.filter(id => reviewIds.includes(id)),
+            newAllocated: Number.isFinite(old.newAllocated) ? old.newAllocated : newIds.length,
+            reviewAllocated: Number.isFinite(old.reviewAllocated) ? old.reviewAllocated : reviewIds.length,
+            initialized: typeof old.initialized === 'boolean' ? old.initialized : (newIds.length > 0 || reviewIds.length > 0 || attemptedIds.length > 0)
+        };
+    }
+
+    // one-time move of any pre-existing localStorage data into IndexedDB, so upgrading never loses progress
+    async function migrateLegacyDataIfNeeded() {
+        const existingDeckCount = await appDB.decks.count();
+        if (existingDeckCount > 0) return;
+
+        let legacyDecks = null;
+        try { legacyDecks = JSON.parse(localStorage.getItem(LEGACY_DECKS_KEY)); } catch (e) { /* ignore malformed legacy data */ }
+
+        let decksToSeed;
+        if (Array.isArray(legacyDecks) && legacyDecks.length > 0) {
+            decksToSeed = legacyDecks;
+        } else {
+            let legacyQuestions = null;
+            try { legacyQuestions = JSON.parse(localStorage.getItem(LEGACY_DB_KEY)); } catch (e) { /* ignore malformed legacy data */ }
+            decksToSeed = [{
+                id: 'deck_default', name: 'IEC 62443',
+                questions: Array.isArray(legacyQuestions) ? legacyQuestions : defaultQuestions,
+                settings: { maxReview: 10, maxNew: 4, selectedCategory: '', randomizeQuestions: true }
+            }];
+        }
+
+        decksToSeed = decksToSeed.map(deck => ({
+            id: String(deck.id),
+            name: deck.name || 'Biblioteka',
+            questions: Array.isArray(deck.questions) ? deck.questions.map(sanitizeQuestionRecord) : [],
+            settings: deck.settings || { maxReview: 10, maxNew: 4, selectedCategory: '', randomizeQuestions: true }
+        }));
+
+        await appDB.decks.bulkPut(decksToSeed);
+
+        const legacyActiveId = localStorage.getItem(LEGACY_ACTIVE_DECK_KEY);
+        await appDB.meta.put({ key: 'activeDeckId', value: legacyActiveId || decksToSeed[0].id });
+
+        const todayStr = getTodayDateKey();
+        for (const deck of decksToSeed) {
+            try {
+                const legacySession = JSON.parse(localStorage.getItem(`session_${deck.id}_${todayStr}`));
+                const migrated = migrateLegacySessionShape(legacySession);
+                if (migrated) await appDB.sessions.put({ key: `session_${deck.id}_${todayStr}`, ...migrated });
+            } catch (e) { /* best effort only, a missing/broken legacy session just starts fresh */ }
+        }
+    }
+
+    let decks = [];
+    let activeDeckId = null;
+    let db = [];
+    let currentQuestion = null;
+    let currentQuestionOptions = [];
+    let todayQueue = [];
+    const MODE_NEW = 'new';
+    const MODE_REVIEW = 'review';
+    let currentMode = MODE_NEW;
+    let isSessionStarted = false;
+    let isEmergencyReviewSession = false;
+    let editingQuestionId = null;
+    let appSettings = { maxReview: 10, maxNew: 4, selectedCategory: '', randomizeQuestions: true };
+
+    function createDefaultDeck() {
+        return {
+            id: 'deck_default',
+            name: 'IEC 62443',
+            questions: defaultQuestions,
+            settings: { maxReview: 10, maxNew: 4, selectedCategory: '', randomizeQuestions: true }
+        };
+    }
+
+    async function loadDecksFromDB() {
+        const fallbackDeck = createDefaultDeck();
+        let shouldSeedFallbackDeck = false;
+        decks = [fallbackDeck];
+        activeDeckId = fallbackDeck.id;
+        db = Array.isArray(fallbackDeck.questions) ? fallbackDeck.questions : [];
+        appSettings = fallbackDeck.settings || { maxReview: 10, maxNew: 4, selectedCategory: '', randomizeQuestions: true };
+
+        try {
+            await appDB.open();
+            try {
+                await migrateLegacyDataIfNeeded();
+            } catch (migrationError) {
+                console.warn('Migration skipped', migrationError);
+            }
+
+            const storedDecks = await appDB.decks.toArray();
+            if (storedDecks.length > 0) {
+                decks = storedDecks;
+            } else {
+                shouldSeedFallbackDeck = true;
+            }
+
+            const activeMeta = await appDB.meta.get('activeDeckId');
+            activeDeckId = decks.some(deck => deck.id === activeMeta?.value) ? activeMeta.value : decks[0].id;
+            const activeDeck = getActiveDeck();
+            db = Array.isArray(activeDeck?.questions) ? activeDeck.questions : [];
+            appSettings = activeDeck?.settings || fallbackDeck.settings;
+        } catch (error) {
+            console.error('Nie udało się wczytać bibliotek z IndexedDB', error);
+        }
+
+        if (shouldSeedFallbackDeck) {
+            try {
+                await Promise.all([appDB.decks.put(fallbackDeck), appDB.meta.put({ key: 'activeDeckId', value: fallbackDeck.id })]);
+            } catch (error) {
+                console.warn('Nie udało się zapisać domyślnej biblioteki do IndexedDB', error);
+            }
+        }
+    }
+
+    function getActiveDeck() {
+        return decks.find(deck => deck.id === activeDeckId) || decks[0];
+    }
+
+    async function persistDecks() {
+        const activeDeck = getActiveDeck();
+        if (activeDeck) {
+            activeDeck.questions = Array.isArray(db) ? db : [];
+            activeDeck.settings = { ...appSettings };
+            await appDB.decks.put(activeDeck);
+        }
+        await appDB.meta.put({ key: 'activeDeckId', value: activeDeckId || '' });
+    }
+
+    function getTodayDateKey() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    function getDailySessionKey() {
+        return `session_${activeDeckId}_${getTodayDateKey()}`;
+    }
+
+    async function loadSessionData() {
+        const key = getDailySessionKey();
+        let data = null;
+        try {
+            data = await appDB.transaction('rw', appDB.sessions, async () => {
+                const existingSession = await appDB.sessions.get(key);
+                if (existingSession) return existingSession;
+
+                const newSession = {
+                    key,
+                    newIds: [], reviewIds: [], attemptedIds: [], correctIds: [], wrongIds: [],
+                    reviewAttemptedIds: [], newAttemptedIds: [], newCorrectIds: [], newWrongIds: [],
+                    reviewCorrectIds: [], reviewWrongIds: [],
+                    newAllocated: 0, reviewAllocated: 0, initialized: false
+                };
+                await appDB.sessions.put(newSession);
+                return newSession;
+            });
+        } catch (e) { data = null; }
+
+        const result = {
+            newIds: Array.isArray(data?.newIds) ? data.newIds : [],
+            reviewIds: Array.isArray(data?.reviewIds) ? data.reviewIds : [],
+            attemptedIds: Array.isArray(data?.attemptedIds) ? data.attemptedIds : [],
+            correctIds: Array.isArray(data?.correctIds) ? data.correctIds : [],
+            wrongIds: Array.isArray(data?.wrongIds) ? data.wrongIds : [],
+            reviewAttemptedIds: Array.isArray(data?.reviewAttemptedIds) ? data.reviewAttemptedIds : [],
+            newAttemptedIds: Array.isArray(data?.newAttemptedIds) ? data.newAttemptedIds : [],
+            newCorrectIds: Array.isArray(data?.newCorrectIds) ? data.newCorrectIds : [],
+            newWrongIds: Array.isArray(data?.newWrongIds) ? data.newWrongIds : [],
+            reviewCorrectIds: Array.isArray(data?.reviewCorrectIds) ? data.reviewCorrectIds : [],
+            reviewWrongIds: Array.isArray(data?.reviewWrongIds) ? data.reviewWrongIds : []
+        };
+        // total new/review slots ever allocated today, used to grow/shrink the pool when settings change
+        result.newAllocated = Number.isFinite(data?.newAllocated) ? data.newAllocated : result.newIds.length;
+        result.reviewAllocated = Number.isFinite(data?.reviewAllocated) ? data.reviewAllocated : result.reviewIds.length;
+        // tracks whether today's queue was already built, so a fully-completed (empty) pool isn't mistaken for a fresh start on reload
+        result.initialized = typeof data?.initialized === 'boolean'
+            ? data.initialized
+            : (result.newIds.length > 0 || result.reviewIds.length > 0 || result.attemptedIds.length > 0);
+
+        // heal orphaned "wrong" entries left over from older sessions: if the id isn't pending in the pool anymore, it can never be retried
+        const poolIds = new Set([...result.reviewIds, ...result.newIds]);
+        result.wrongIds = result.wrongIds.filter(id => poolIds.has(id));
+        return result;
+    }
+
+    async function saveSessionData(data) {
+        await appDB.sessions.put({ key: getDailySessionKey(), ...data });
+    }
+
+    function updateHeaderTitle() {
+        const title = document.getElementById('deck-header-title');
+        const activeDeck = getActiveDeck();
+        if (title) title.textContent = activeDeck?.name || 'Biblioteka';
+    }
+
+    function populateDeckSelector() {
+        const select = document.getElementById('cfg-deck-select');
+        const nameInput = document.getElementById('cfg-deck-name');
+        if (!select) return;
+
+        select.innerHTML = '';
+        decks.forEach((deck) => {
+            const option = document.createElement('option');
+            option.value = deck.id;
+            option.textContent = deck.name;
+            select.appendChild(option);
+        });
+
+        select.value = activeDeckId;
+        if (nameInput) nameInput.value = getActiveDeck()?.name || '';
+        renderImportedSets();
+    }
+
+    function getImportedSets() {
+        const activeDeck = getActiveDeck();
+        return Array.isArray(activeDeck?.importSets) ? activeDeck.importSets : [];
+    }
+
+    function renderImportedSets() {
+        const list = document.getElementById('imported-sets-list');
+        if (!list) return;
+        const importedSets = getImportedSets();
+        list.innerHTML = '';
+
+        if (importedSets.length === 0) {
+            list.textContent = 'Brak wgranych zestawów w tej bibliotece.';
+            return;
+        }
+
+        importedSets.forEach((importSet) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);';
+            const details = document.createElement('span');
+            const uploadedAt = importSet.importedAt ? new Date(importSet.importedAt).toLocaleString('pl-PL') : '';
+            details.textContent = `${importSet.fileName || 'Zestaw JSON'} (${importSet.questionCount || 0} pytań)${uploadedAt ? ` - ${uploadedAt}` : ''}`;
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-danger imported-set-delete-btn';
+            deleteButton.style.cssText = 'margin:0; padding:5px 8px; font-size:12px;';
+            deleteButton.dataset.setId = importSet.id;
+            deleteButton.textContent = 'Usuń';
+            row.append(details, deleteButton);
+            list.appendChild(row);
+        });
+    }
+
+    async function setActiveDeck(deckId) {
+        if (!deckId) return;
+        activeDeckId = deckId;
+        const deck = getActiveDeck();
+        if (deck) {
+            db = Array.isArray(deck.questions) ? deck.questions : [];
+            appSettings = deck.settings || { maxReview: 10, maxNew: 4, randomizeQuestions: true };
+            populateDeckSelector();
+            updateHeaderTitle();
+            const maxReviewEl = document.getElementById('cfg-max-review');
+            const maxNewEl = document.getElementById('cfg-max-new');
+            if (maxReviewEl) maxReviewEl.value = appSettings.maxReview;
+            if (maxNewEl) maxNewEl.value = appSettings.maxNew;
+            persistDecks().catch(() => {});
+            buildQueue(false).catch(() => {});
+        }
+    }
+
+    async function createNewDeck(name = 'Nowa biblioteka') {
+        const deckId = 'deck_' + Date.now();
+        const deck = {
+            id: deckId,
+            name: stripTags(name).slice(0, 100) || 'Nowa biblioteka',
+            questions: [],
+            settings: { maxReview: 10, maxNew: 10, randomizeQuestions: true }
+        };
+        decks.push(deck);
+        activeDeckId = deckId;
+        db = [];
+        appSettings = deck.settings;
+        populateDeckSelector();
+        updateHeaderTitle();
+        const maxReviewEl = document.getElementById('cfg-max-review');
+        const maxNewEl = document.getElementById('cfg-max-new');
+        const randomizeEl = document.getElementById('cfg-randomize-questions');
+        if (maxReviewEl) maxReviewEl.value = appSettings.maxReview;
+        if (maxNewEl) maxNewEl.value = appSettings.maxNew;
+        if (randomizeEl) randomizeEl.checked = !!appSettings.randomizeQuestions;
+        persistDecks().catch(() => {});
+        buildQueue(false).catch(() => {});
+        return deck;
+    }
+
+    async function initializeApp() {
+        populateDeckSelector();
+        updateHeaderTitle();
+
+        const maxReviewEl = document.getElementById('cfg-max-review');
+        const maxNewEl = document.getElementById('cfg-max-new');
+        const randomizeEl = document.getElementById('cfg-randomize-questions');
+        if (maxReviewEl) maxReviewEl.value = appSettings.maxReview;
+        if (maxNewEl) maxNewEl.value = appSettings.maxNew;
+        if (randomizeEl) randomizeEl.checked = !!appSettings.randomizeQuestions;
+
+        try {
+            await loadDecksFromDB();
+        } catch (error) {
+            console.warn('Initial deck load failed', error);
+        }
+        initCloudStorage().catch((error) => console.warn('Cloud init skipped', error));
+        populateDeckSelector();
+        updateHeaderTitle();
+        if (maxReviewEl) maxReviewEl.value = appSettings.maxReview;
+        if (maxNewEl) maxNewEl.value = appSettings.maxNew;
+        if (randomizeEl) randomizeEl.checked = !!appSettings.randomizeQuestions;
+
+        const mainTabsEl = document.getElementById('main-tabs');
+        if (mainTabsEl) {
+            mainTabsEl.addEventListener('click', (e) => {
+                const targetBtn = e.target.closest('.tab-btn');
+                if(targetBtn) switchTab(targetBtn.dataset.target);
+            });
+        }
+
+        document.addEventListener('click', async (e) => {
+            if(e.target.classList.contains('action-btn')) {
+                const action = e.target.dataset.action;
+                if(action === 'answer-correct') await processAnswer(true);
+                if(action === 'answer-wrong') await processAnswer(false);
+                if(action === 'save-question') await addCustomQuestion();
+                if(action === 'cancel-edit') cancelEditing();
+                if(action === 'google-login') await handleAuthClick();
+                if(action === 'google-logout') await handleSignoutClick();
+                if(action === 'sync-cloud') await pushDataToCloud();
+                if(action === 'export-json') exportData();
+            }
+
+            if(e.target.classList.contains('delete-question-btn')) await deleteQuestion(e.target.dataset.id);
+            if(e.target.classList.contains('edit-question-btn')) loadQuestionForEdit(e.target.dataset.id);
+            if(e.target.classList.contains('imported-set-delete-btn')) await deleteImportedSet(e.target.dataset.setId);
+            if(e.target.classList.contains('quiz-option-btn') && !e.target.disabled) {
+                checkOption(e.target, e.target.dataset.correct === 'true');
+            }
+        });
+
+        const importFileEl = document.getElementById('import-file');
+        if (importFileEl) importFileEl.addEventListener('change', importData);
+        const exportFullBackupBtn = document.getElementById('export-full-backup-btn');
+        if (exportFullBackupBtn) exportFullBackupBtn.addEventListener('click', () => exportFullBackup().catch((error) => alert(`Nie udało się utworzyć pełnego backupu: ${error.message || error}`)));
+        const quizExportFullBackupBtn = document.getElementById('quiz-export-full-backup-btn');
+        if (quizExportFullBackupBtn) quizExportFullBackupBtn.addEventListener('click', () => exportFullBackup().catch((error) => alert(`Nie udało się utworzyć pełnego backupu: ${error.message || error}`)));
+        const startReviewBtn = document.getElementById('start-review-btn');
+        if (startReviewBtn) startReviewBtn.addEventListener('click', startReviewSession);
+        const startNewBtn = document.getElementById('start-new-btn');
+        if (startNewBtn) startNewBtn.addEventListener('click', startNewSession);
+        const quizStartReviewBtn = document.getElementById('quiz-start-review-btn');
+        if (quizStartReviewBtn) quizStartReviewBtn.addEventListener('click', startReviewSession);
+        document.querySelectorAll('.emergency-review-btn').forEach((button) => {
+            button.addEventListener('click', () => startEmergencyReviewSession(button.dataset.reviewRange));
+        });
+        document.querySelectorAll('[data-learning-section]').forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+                const sectionName = toggle.dataset.learningSection;
+                setLearningSectionOpen(sectionName, toggle.getAttribute('aria-expanded') !== 'true');
+            });
+        });
+        const importFullBackupFileEl = document.getElementById('import-full-backup-file');
+        if (importFullBackupFileEl) importFullBackupFileEl.addEventListener('change', importFullBackup);
+        const deckSelectEl = document.getElementById('cfg-deck-select');
+        if (deckSelectEl) deckSelectEl.addEventListener('change', (e) => setActiveDeck(e.target.value));
+        const deckNameEl = document.getElementById('cfg-deck-name');
+        if (deckNameEl) deckNameEl.addEventListener('change', async (e) => {
+            const deck = getActiveDeck();
+            if (deck) {
+                deck.name = stripTags(e.target.value).slice(0, 100) || 'Nowa biblioteka';
+                populateDeckSelector();
+                await persistDecks();
+            }
+        });
+        const toggleDbStatsBtn = document.getElementById('toggle-db-stats-btn');
+        if (toggleDbStatsBtn) toggleDbStatsBtn.addEventListener('click', () => {
+            const panel = document.getElementById('db-stats-panel');
+            panel.classList.toggle('hidden');
+            renderDbStatsPanel();
+        });
+        const newDeckBtn = document.getElementById('new-deck-btn');
+        if (newDeckBtn) newDeckBtn.addEventListener('click', () => createNewDeck('Nowa biblioteka'));
+        const resetProgressBtn = document.getElementById('reset-progress-btn');
+        if (resetProgressBtn) resetProgressBtn.addEventListener('click', async () => {
+            if (confirm('Czy na pewno chcesz zresetować postępy dla tej biblioteki?')) {
+                const deck = getActiveDeck();
+                if (deck) {
+                    deck.questions = (deck.questions || []).map(q => ({
+                        ...q, interval: 0, nextReviewDate: getTodayDateKey(), repetitions: 0,
+                        totalAttempts: 0, totalCorrect: 0, lastReviewedDate: null
+                    }));
+                    db = deck.questions;
+                    await persistDecks();
+                    await buildQueue(true);
+                    alert('Postępy zostały zresetowane.');
+                }
+            }
+        });
+        const deleteDeckBtn = document.getElementById('delete-deck-btn');
+        if (deleteDeckBtn) deleteDeckBtn.addEventListener('click', async () => {
+            if (confirm('Czy na pewno chcesz usunąć tę bibliotekę?')) {
+                const currentDeckId = activeDeckId;
+                const remainingDecks = decks.filter(deck => deck.id !== currentDeckId);
+                if (remainingDecks.length === 0) {
+                    alert('Nie można usunąć ostatniej biblioteki.');
+                    return;
+                }
+                await appDB.decks.delete(currentDeckId);
+                decks = remainingDecks;
+                activeDeckId = decks[0].id;
+                db = Array.isArray(getActiveDeck()?.questions) ? getActiveDeck().questions : [];
+                appSettings = getActiveDeck()?.settings || { maxReview: 10, maxNew: 4, randomizeQuestions: true };
+                populateDeckSelector();
+                updateHeaderTitle();
+                await persistDecks();
+                // buildQueue(false) reuses today's already-initialized session for the deck we fall back to instead of wiping its progress
+                await buildQueue(false);
+                alert('Biblioteka została usunięta.');
+            }
+        });
+        
+        const saveSettings = async () => {
+            const randomizationChanged = appSettings.randomizeQuestions !== document.getElementById('cfg-randomize-questions').checked;
+            appSettings.maxReview = parseInt(document.getElementById('cfg-max-review').value) || 0;
+            appSettings.maxNew = parseInt(document.getElementById('cfg-max-new').value) || 0;
+            appSettings.randomizeQuestions = document.getElementById('cfg-randomize-questions').checked;
+            await persistDecks();
+            await adjustQueueForSettings(randomizationChanged);
+        };
+
+        if (maxReviewEl) maxReviewEl.addEventListener('change', saveSettings);
+        if (maxNewEl) maxNewEl.addEventListener('change', saveSettings);
+        if (maxReviewEl) maxReviewEl.addEventListener('input', saveSettings);
+        if (maxNewEl) maxNewEl.addEventListener('input', saveSettings);
+        if (randomizeEl) randomizeEl.addEventListener('change', saveSettings);
+
+        placeQuizBox();
+        try {
+            await updateBadges();
+        } catch (error) {
+            console.error('Nie udało się odświeżyć statystyk', error);
+        }
+    }
+
+    window.initializeApp = initializeApp;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => initializeApp(), { once: true });
+    } else {
+        initializeApp();
+    }
+
+    async function saveToStorage() {
+        await persistDecks();
+        populateDeckSelector();
+        await updateBadges();
+        if(cloudStorage.isActive()) await pushDataToCloud();
+    }
+
+    async function switchTab(tabId) {
+        const targetPanel = document.getElementById('tab-' + tabId);
+        if (!targetPanel) return;
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        targetPanel.classList.remove('hidden');
+        
+        const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.dataset.target === tabId);
+        if(btn) btn.classList.add('active');
+
+        if(tabId === 'quiz') await updateBadges();
+        if(tabId === 'editor') await renderEditorList();
+    }
+
+    window.switchTab = switchTab;
+
+    async function startNewSession() {
+        currentMode = MODE_NEW;
+        isSessionStarted = true;
+        isEmergencyReviewSession = false;
+        setLearningSectionOpen('daily', true);
+        placeQuizBox();
+        todayQueue = [];
+        await buildQueue(false);
+    }
+
+    async function startReviewSession() {
+        currentMode = MODE_REVIEW;
+        isSessionStarted = true;
+        isEmergencyReviewSession = false;
+        setLearningSectionOpen('review', true);
+        placeQuizBox();
+        todayQueue = [];
+        await buildQueue(false);
+    }
+
+    function setLearningSectionOpen(sectionName, isOpen) {
+        const content = document.getElementById(`${sectionName}-learning-content`);
+        const toggle = document.querySelector(`[data-learning-section="${sectionName}"]`);
+        if (!content || !toggle) return;
+        content.classList.toggle('is-collapsed', !isOpen);
+        toggle.setAttribute('aria-expanded', String(isOpen));
+    }
+
+    function placeQuizBox() {
+        const quizBox = document.getElementById('quiz-box');
+        const slot = document.getElementById(currentMode === MODE_REVIEW ? 'review-quiz-slot' : 'daily-quiz-slot');
+        if (quizBox && slot && quizBox.parentElement !== slot) slot.appendChild(quizBox);
+        if (quizBox) quizBox.classList.toggle('hidden', !isSessionStarted);
+    }
+
+    function addDaysStr(dateStr, days) {
+        const d = new Date(dateStr + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    }
+
+    // Priority 1: lowest accuracy ratio (most often mistaken) first. Priority 2: least recently reviewed first.
+    function sortReviewsByPriority(reviews) {
+        return [...reviews].sort((a, b) => {
+            const ratioA = a.totalAttempts > 0 ? a.totalCorrect / a.totalAttempts : 0;
+            const ratioB = b.totalAttempts > 0 ? b.totalCorrect / b.totalAttempts : 0;
+            if (ratioA !== ratioB) return ratioA - ratioB;
+            const dateA = a.lastReviewedDate || a.nextReviewDate || '';
+            const dateB = b.lastReviewedDate || b.nextReviewDate || '';
+            return dateA < dateB ? -1 : (dateA > dateB ? 1 : 0);
+        });
+    }
+
+    function computeDbDistribution() {
+        const todayStr = getTodayDateKey();
+        const in7 = addDaysStr(todayStr, 7);
+        const in30 = addDaysStr(todayStr, 30);
+        let overdueToday = 0, within7 = 0, within30 = 0, beyond30 = 0;
+        db.forEach(q => {
+            if (q.interval === 0) return;
+            if (q.nextReviewDate <= todayStr) overdueToday += 1;
+            else if (q.nextReviewDate <= in7) within7 += 1;
+            else if (q.nextReviewDate <= in30) within30 += 1;
+            else beyond30 += 1;
+        });
+        return { overdueToday, within7, within30, beyond30 };
+    }
+
+    function getEmergencyReviewRange(rangeName) {
+        const todayStr = getTodayDateKey();
+        const in7 = addDaysStr(todayStr, 7);
+        const in30 = addDaysStr(todayStr, 30);
+        const ranges = {
+            overdue: { label: 'Zaległe / Dziś', matches: question => question.nextReviewDate <= todayStr },
+            week: { label: 'Do 7 dni', matches: question => question.nextReviewDate > todayStr && question.nextReviewDate <= in7 },
+            month: { label: '8 - 30 dni', matches: question => question.nextReviewDate > in7 && question.nextReviewDate <= in30 },
+            far: { label: 'Powyżej 30 dni', matches: question => question.nextReviewDate > in30 }
+        };
+        return ranges[rangeName] || null;
+    }
+
+    async function startEmergencyReviewSession(rangeName) {
+        const range = getEmergencyReviewRange(rangeName);
+        if (!range) return;
+
+        const questions = db.filter(question => question.interval > 0 && range.matches(question));
+        if (questions.length === 0) {
+            alert(`Brak pytań w zakresie „${range.label}”.`);
+            return;
+        }
+
+        const confirmed = window.confirm(`Czy na pewno chcesz rozpocząć doraźną sesję powtórek dla zakresu „${range.label}”? Liczba pytań w tej sesji: ${questions.length}.`);
+        if (!confirmed) return;
+
+        currentMode = MODE_REVIEW;
+        isSessionStarted = true;
+        isEmergencyReviewSession = true;
+        setLearningSectionOpen('review', true);
+        placeQuizBox();
+        todayQueue = sortReviewsByPriority(questions);
+        await updateBadges();
+        nextQuestion();
+    }
+
+    function renderDbStatsPanel() {
+        const dist = computeDbDistribution();
+        document.getElementById('cnt-db-overdue').textContent = dist.overdueToday;
+        document.getElementById('cnt-db-week').textContent = dist.within7;
+        document.getElementById('cnt-db-month').textContent = dist.within30;
+        document.getElementById('cnt-db-far').textContent = dist.beyond30;
+        const emergencyCounts = {
+            overdue: dist.overdueToday,
+            week: dist.within7,
+            month: dist.within30,
+            far: dist.beyond30
+        };
+        Object.entries(emergencyCounts).forEach(([rangeName, count]) => {
+            const countEl = document.getElementById(`emergency-${rangeName}-count`);
+            const button = document.querySelector(`.emergency-review-btn[data-review-range="${rangeName}"]`);
+            if (countEl) countEl.textContent = count;
+            if (button) button.disabled = count === 0;
+        });
+    }
+
+    async function updateBadges() {
+        const totalQuestionsEl = document.getElementById('total-questions-cnt');
+        if (totalQuestionsEl) totalQuestionsEl.textContent = db.length;
+
+        const session = await loadSessionData();
+        const dailyLimit = Math.max(1, Number(appSettings.maxNew) || 1);
+        const reviewLimit = Math.max(0, Number(appSettings.maxReview) || 0);
+
+        const doneToday = session.newAttemptedIds.length;
+        const correctCount = session.newCorrectIds.length;
+        const wrongCount = session.newWrongIds.length;
+        const allRemaining = db.filter(question => question.interval === 0).length;
+
+        const reviewDone = session.reviewAttemptedIds.length;
+        const reviewCorrect = session.reviewCorrectIds.length;
+        const reviewWrong = session.reviewWrongIds.length;
+        const reviewAvailable = db.filter(question => question.interval > 0 && question.nextReviewDate <= getTodayDateKey()).length;
+
+        const cntTodayTotalEl = document.getElementById('cnt-today-total');
+        const cntTodayRemainingEl = document.getElementById('cnt-today-remaining');
+        const cntCorrectEl = document.getElementById('cnt-correct');
+        const cntWrongEl = document.getElementById('cnt-wrong');
+        const cntAllTotalEl = document.getElementById('cnt-all-total');
+        const cntAllRemainingEl = document.getElementById('cnt-all-remaining');
+        const quizSummaryEl = document.getElementById('quiz-summary');
+        const cntReviewPlannedEl = document.getElementById('cnt-review-planned');
+        const cntReviewDoneEl = document.getElementById('cnt-review-done');
+        const cntReviewCorrectEl = document.getElementById('cnt-review-correct');
+        const cntReviewWrongEl = document.getElementById('cnt-review-wrong');
+        const cntReviewAvailableEl = document.getElementById('cnt-review-available');
+
+        if (cntTodayTotalEl) cntTodayTotalEl.textContent = dailyLimit;
+        if (cntTodayRemainingEl) cntTodayRemainingEl.textContent = doneToday;
+        if (cntCorrectEl) cntCorrectEl.textContent = correctCount;
+        if (cntWrongEl) cntWrongEl.textContent = wrongCount;
+        if (cntAllTotalEl) cntAllTotalEl.textContent = db.length;
+        if (cntAllRemainingEl) cntAllRemainingEl.textContent = allRemaining;
+        if (quizSummaryEl) quizSummaryEl.textContent = `Przerobiono dziś: ${doneToday} / ${dailyLimit}`;
+
+        if (cntReviewPlannedEl) cntReviewPlannedEl.textContent = reviewLimit;
+        if (cntReviewDoneEl) cntReviewDoneEl.textContent = reviewDone;
+        if (cntReviewCorrectEl) cntReviewCorrectEl.textContent = reviewCorrect;
+        if (cntReviewWrongEl) cntReviewWrongEl.textContent = reviewWrong;
+        if (cntReviewAvailableEl) cntReviewAvailableEl.textContent = reviewAvailable;
+
+        renderDbStatsPanel();
+    }
+
+    async function buildQueue(forceRebuild = false) {
+        const todayStr = getTodayDateKey();
+        let session = await loadSessionData();
+
+        if (!isSessionStarted && !forceRebuild) {
+            await updateBadges();
+            return;
+        }
+
+        if (forceRebuild || !session.initialized) {
+            const newLimit = Math.max(1, Number(appSettings.maxNew) || 1);
+            const reviewLimit = Math.max(0, Number(appSettings.maxReview) || 0);
+
+            if (forceRebuild) {
+                session.reviewIds = [];
+                session.newIds = [];
+                session.attemptedIds = [];
+                session.correctIds = [];
+                session.wrongIds = [];
+                session.reviewAttemptedIds = [];
+                session.newAttemptedIds = [];
+                session.newCorrectIds = [];
+                session.newWrongIds = [];
+                session.reviewCorrectIds = [];
+                session.reviewWrongIds = [];
+            }
+
+            let availableReviews = db.filter(q => q.interval > 0 && q.nextReviewDate <= todayStr);
+            availableReviews = sortReviewsByPriority(availableReviews);
+            let selectedReviews = availableReviews.slice(0, reviewLimit);
+
+            let availableNew = db.filter(q => q.interval === 0);
+            if (appSettings.randomizeQuestions) availableNew = secureShuffle(availableNew);
+            let selectedNew = availableNew.slice(0, newLimit);
+
+            session.reviewIds = selectedReviews.map(q => q.id);
+            session.newIds = selectedNew.map(q => q.id);
+            session.reviewAllocated = selectedReviews.length;
+            session.newAllocated = selectedNew.length;
+            session.initialized = true;
+            await saveSessionData(session);
+
+        }
+
+        const modeIds = currentMode === MODE_REVIEW ? session.reviewIds : session.newIds;
+        const modeWrongIds = currentMode === MODE_REVIEW ? session.reviewWrongIds : session.newWrongIds;
+        const validIds = new Set(modeIds);
+        todayQueue = todayQueue.filter(question => validIds.has(question.id));
+        if (todayQueue.length === 0 && validIds.size > 0) {
+            const failedIds = new Set(modeWrongIds);
+            const questionsById = new Map(db.map(question => [question.id, question]));
+            todayQueue = [
+                ...modeIds.filter(id => !failedIds.has(id)).map(id => questionsById.get(id)).filter(Boolean),
+                ...modeIds.filter(id => failedIds.has(id)).map(id => questionsById.get(id)).filter(Boolean)
+            ];
+        }
+
+        await updateBadges();
+        nextQuestion();
+    }
+
+    // Grows or shrinks today's pending pool to match new limits without wiping already answered progress.
+    async function adjustQueueForSettings(reorderNewQueue = false) {
+        const todayStr = getTodayDateKey();
+        let session = await loadSessionData();
+
+        const newLimit = Math.max(1, Number(appSettings.maxNew) || 1);
+        const reviewLimit = Math.max(0, Number(appSettings.maxReview) || 0);
+        // only reserve review slots that can actually be filled today, otherwise unused review budget must go to new words
+        const usedIdsForCounting = new Set([...session.attemptedIds, ...session.reviewIds, ...session.newIds]);
+        const extraAvailableReviews = db.filter(q => q.interval > 0 && q.nextReviewDate <= todayStr && !usedIdsForCounting.has(q.id)).length;
+        const maxAchievableReviews = session.reviewAllocated + extraAvailableReviews;
+        const targetReviewTotal = Math.min(reviewLimit, maxAchievableReviews);
+        const targetNewTotal = newLimit;
+
+        const growPool = (idsKey, allocatedKey, target, filterFn, byPriority) => {
+            const usedIds = new Set([...session.attemptedIds, ...session.reviewIds, ...session.newIds]);
+            let candidates = db.filter(q => filterFn(q) && !usedIds.has(q.id));
+            candidates = byPriority ? sortReviewsByPriority(candidates) : (appSettings.randomizeQuestions ? secureShuffle(candidates) : candidates);
+            const needed = target - session[allocatedKey];
+            const toAdd = candidates.slice(0, needed);
+            session[idsKey].push(...toAdd.map(q => q.id));
+            session[allocatedKey] += toAdd.length;
+            if ((idsKey === 'newIds' && currentMode === MODE_NEW) || (idsKey === 'reviewIds' && currentMode === MODE_REVIEW)) {
+                todayQueue.push(...toAdd);
+            }
+        };
+
+        // only ever drop never-attempted ids: an already-attempted "wrong" question must keep retrying until answered correctly
+        const shrinkPool = (idsKey, allocatedKey, target) => {
+            let excess = session[allocatedKey] - target;
+            if (excess <= 0) return;
+            for (let i = session[idsKey].length - 1; i >= 0 && excess > 0; i--) {
+                const id = session[idsKey][i];
+                if (id === currentQuestion?.id) continue; // never remove the question being shown
+                if (session.attemptedIds.includes(id)) continue; // never strand an already-attempted question
+                session[idsKey].splice(i, 1);
+                session[allocatedKey] -= 1;
+                todayQueue = todayQueue.filter(q => q.id !== id);
+                excess -= 1;
+            }
+        };
+
+        if (session.reviewAllocated < targetReviewTotal) {
+            growPool('reviewIds', 'reviewAllocated', targetReviewTotal, q => q.interval > 0 && q.nextReviewDate <= todayStr, true);
+        } else if (session.reviewAllocated > targetReviewTotal) {
+            shrinkPool('reviewIds', 'reviewAllocated', targetReviewTotal);
+        }
+
+        if (session.newAllocated < targetNewTotal) {
+            growPool('newIds', 'newAllocated', targetNewTotal, q => q.interval === 0, false);
+        } else if (session.newAllocated > targetNewTotal) {
+            shrinkPool('newIds', 'newAllocated', targetNewTotal);
+        }
+
+        if (reorderNewQueue) {
+            const selectedNewIds = new Set(session.newIds);
+            let reorderedNewIds = db.filter(question => selectedNewIds.has(question.id)).map(question => question.id);
+            if (appSettings.randomizeQuestions) reorderedNewIds = secureShuffle(reorderedNewIds);
+            session.newIds = reorderedNewIds;
+
+            if (currentMode === MODE_NEW) {
+                const wrongIds = new Set(session.newWrongIds);
+                const currentId = currentQuestion?.id;
+                const orderedIds = [
+                    ...reorderedNewIds.filter(id => id === currentId || !wrongIds.has(id)),
+                    ...reorderedNewIds.filter(id => id !== currentId && wrongIds.has(id))
+                ];
+                const questionsById = new Map(db.map(question => [question.id, question]));
+                todayQueue = orderedIds.map(id => questionsById.get(id)).filter(Boolean);
+            }
+        }
+
+        // no full reshuffle here so the currently displayed question doesn't jump mid-answer
+        await saveSessionData(session);
+        await updateBadges();
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        if (!isSessionStarted) {
+            const quizBox = document.getElementById('quiz-box');
+            if (quizBox) quizBox.classList.add('hidden');
+            return;
+        }
+
+        const feedbackEl = document.getElementById('quiz-feedback');
+        const categoryEl = document.getElementById('quiz-category');
+        const questionNumberEl = document.getElementById('quiz-number');
+        const questionEl = document.getElementById('quiz-question');
+        const optionsEl = document.getElementById('quiz-options');
+        const backupReminderEl = document.getElementById('quiz-backup-reminder');
+        const quizStartReviewBtn = document.getElementById('quiz-start-review-btn');
+        if (feedbackEl) feedbackEl.classList.add('hidden');
+        if (todayQueue.length === 0) {
+            if (categoryEl) categoryEl.innerText = "";
+            if (questionNumberEl) questionNumberEl.innerText = "";
+            if (questionEl) questionEl.innerText = isEmergencyReviewSession
+                ? 'Doraźna sesja powtórek została ukończona!'
+                : currentMode === MODE_REVIEW
+                ? 'Wszystkie powtórki na dziś zostały ukończone! Świetna robota.'
+                : 'Świetnie! Przerobiono cały dzisiejszy materiał. Czy chcesz przejść do powtórek?';
+            if (optionsEl) optionsEl.innerHTML = "";
+            if (backupReminderEl) backupReminderEl.classList.remove('hidden');
+            if (quizStartReviewBtn) quizStartReviewBtn.classList.toggle('hidden', currentMode === MODE_REVIEW);
+            currentQuestion = null;
+            currentQuestionOptions = [];
+            updateBadges();
+            return;
+        }
+
+        currentQuestion = todayQueue[0];
+        currentQuestionOptions = secureShuffle((currentQuestion.options || []).map((opt, index) => ({ ...opt, index })));
+    if (backupReminderEl) backupReminderEl.classList.add('hidden');
+
+        if (categoryEl) categoryEl.textContent = currentQuestion.category;
+        if (questionNumberEl) questionNumberEl.textContent = getQuestionNumberLabel(currentQuestion);
+        if (questionEl) questionEl.innerHTML = sanitizeHTML(currentQuestion.question);
+
+        if (optionsEl) {
+            optionsEl.innerHTML = "";
+            currentQuestionOptions.forEach((opt) => {
+                const optBtn = document.createElement('button');
+                optBtn.className = 'option-btn quiz-option-btn';
+                optBtn.setAttribute('data-correct', String(!!opt.isCorrect));
+                optBtn.textContent = opt.text;
+                optionsEl.appendChild(optBtn);
+            });
+        }
+        updateBadges();
+    }
+
+    function checkOption(btn, isCorrect) {
+        document.querySelectorAll('.quiz-option-btn').forEach(b => b.disabled = true);
+        if (isCorrect) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('incorrect');
+            document.querySelectorAll('.quiz-option-btn').forEach((b) => {
+                if(b.dataset.correct === 'true') b.classList.add('correct');
+            });
+        }
+        document.getElementById('quiz-explanation').textContent = currentQuestion.explanation; 
+        document.getElementById('quiz-feedback').classList.remove('hidden');
+    }
+
+    async function processAnswer(userKnewIt) {
+        let qIndex = db.findIndex(q => q.id === currentQuestion.id);
+        if(qIndex === -1) return;
+        
+        let intervals = [0, 1, 5, 10, 30, 60, 90, 180];
+
+        let session = await loadSessionData();
+        const wasReview = currentMode === MODE_REVIEW;
+        const isFirstAttempt = !session.attemptedIds.includes(currentQuestion.id);
+        const isFirstModeAttempt = currentMode === MODE_REVIEW
+            ? !session.reviewAttemptedIds.includes(currentQuestion.id)
+            : !session.newAttemptedIds.includes(currentQuestion.id);
+
+        db[qIndex].totalAttempts = (db[qIndex].totalAttempts || 0) + 1;
+        db[qIndex].lastReviewedDate = getTodayDateKey();
+
+        if (userKnewIt) {
+            let currIntIdx = intervals.indexOf(db[qIndex].interval);
+            let nextIdx = currIntIdx + 1 < intervals.length ? currIntIdx + 1 : intervals.length - 1;
+            if (nextIdx === 0) nextIdx = 1;
+            
+            const isFirstCorrectNewCard = !wasReview && isFirstAttempt && db[qIndex].interval === 0;
+            db[qIndex].interval = isFirstCorrectNewCard ? 7 : intervals[nextIdx];
+            db[qIndex].repetitions += 1;
+            db[qIndex].totalCorrect = (db[qIndex].totalCorrect || 0) + 1;
+            
+            let targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + db[qIndex].interval);
+            db[qIndex].nextReviewDate = targetDate.toISOString().split('T')[0];
+
+            todayQueue.shift();
+
+            session.newIds = session.newIds.filter(id => id !== currentQuestion.id);
+            session.reviewIds = session.reviewIds.filter(id => id !== currentQuestion.id);
+            if (!session.attemptedIds.includes(currentQuestion.id)) session.attemptedIds.push(currentQuestion.id);
+            if (!session.correctIds.includes(currentQuestion.id)) session.correctIds.push(currentQuestion.id);
+            session.wrongIds = session.wrongIds.filter(id => id !== currentQuestion.id);
+            if (wasReview) {
+                if (!session.reviewAttemptedIds.includes(currentQuestion.id)) session.reviewAttemptedIds.push(currentQuestion.id);
+                if (!session.reviewCorrectIds.includes(currentQuestion.id)) session.reviewCorrectIds.push(currentQuestion.id);
+                session.reviewWrongIds = session.reviewWrongIds.filter(id => id !== currentQuestion.id);
+            } else {
+                if (!session.newAttemptedIds.includes(currentQuestion.id)) session.newAttemptedIds.push(currentQuestion.id);
+                if (!session.newCorrectIds.includes(currentQuestion.id)) session.newCorrectIds.push(currentQuestion.id);
+                session.newWrongIds = session.newWrongIds.filter(id => id !== currentQuestion.id);
+            }
+        } else {
+            db[qIndex].interval = 0;
+            
+            let failedQuestion = todayQueue.shift();
+            todayQueue.push(failedQuestion);
+
+            if (!session.attemptedIds.includes(currentQuestion.id)) session.attemptedIds.push(currentQuestion.id);
+            if (!session.wrongIds.includes(currentQuestion.id)) session.wrongIds.push(currentQuestion.id);
+            session.correctIds = session.correctIds.filter(id => id !== currentQuestion.id);
+            if (wasReview) {
+                if (!session.reviewAttemptedIds.includes(currentQuestion.id)) session.reviewAttemptedIds.push(currentQuestion.id);
+                if (!session.reviewWrongIds.includes(currentQuestion.id)) session.reviewWrongIds.push(currentQuestion.id);
+                session.reviewCorrectIds = session.reviewCorrectIds.filter(id => id !== currentQuestion.id);
+            } else {
+                if (!session.newAttemptedIds.includes(currentQuestion.id)) session.newAttemptedIds.push(currentQuestion.id);
+                if (!session.newWrongIds.includes(currentQuestion.id)) session.newWrongIds.push(currentQuestion.id);
+                session.newCorrectIds = session.newCorrectIds.filter(id => id !== currentQuestion.id);
+            }
+        }
+
+        if (isFirstAttempt && wasReview && isFirstModeAttempt && !session.reviewAttemptedIds.includes(currentQuestion.id)) {
+            session.reviewAttemptedIds.push(currentQuestion.id);
+        }
+
+        await saveSessionData(session);
+        await saveToStorage();
+        nextQuestion();
+    }
+
+    async function addCustomQuestion() {
+        let qText = document.getElementById('edit-q').value.substring(0, 1500);
+        let cat = document.getElementById('edit-cat').value.substring(0, 150);
+        let exp = document.getElementById('edit-exp').value.substring(0, 1500);
+        
+        let correctIdxChecked = document.querySelector('input[name="correct-opt"]:checked');
+        let correctIdx = correctIdxChecked ? parseInt(correctIdxChecked.value) : 0;
+        
+        let options = [];
+        for(let i=0; i<4; i++) {
+            let optVal = document.getElementById('opt-' + i).value.substring(0, 400);
+            options.push({ text: optVal, isCorrect: i === correctIdx });
+        }
+        
+        if (editingQuestionId) {
+            let idx = db.findIndex(q => String(q.id) === String(editingQuestionId));
+            if (idx !== -1) {
+                const sanitized = sanitizeQuestionRecord({ ...db[idx], category: cat, question: qText, options, explanation: exp });
+                db[idx] = { ...db[idx], ...sanitized };
+                await saveToStorage();
+                await renderEditorList();
+                cancelEditing();
+                alert("Zmiany zostały zapisane.");
+                return;
+            }
+        }
+
+        db.push(sanitizeQuestionRecord({
+            id: window.crypto.randomUUID ? window.crypto.randomUUID() : "custom_" + Date.now(),
+            category: cat, question: qText, options: options, explanation: exp,
+            interval: 0, nextReviewDate: getTodayDateKey(), repetitions: 0
+        }));
+        await saveToStorage();
+        await adjustQueueForSettings();
+        await renderEditorList();
+        alert("Nowe pytanie dodane do bazy!");
+    }
+
+    async function deleteQuestion(id) {
+        if(confirm("Czy na pewno chcesz usunąć to pytanie z bazy?")) {
+            db = db.filter(q => String(q.id) !== id);
+            todayQueue = todayQueue.filter(q => String(q.id) !== id);
+            await saveToStorage();
+            await renderEditorList();
+            nextQuestion();
+        }
+    }
+
+    async function renderEditorList() {
+        const list = document.getElementById('questions-list');
+        list.innerHTML = "";
+        db.forEach((q) => {
+            const row = document.createElement('div');
+            row.style.cssText = "border-bottom:1px solid var(--border); padding:8px 0; display:flex; justify-content:space-between; align-items:center; gap: 10px;";
+
+            const label = document.createElement('span');
+            const strong = document.createElement('strong');
+            strong.textContent = `[${q.category}]`;
+            label.appendChild(strong);
+            label.appendChild(document.createTextNode(' ' + stripTags(q.question)));
+            row.appendChild(label);
+
+            const actions = document.createElement('div');
+            actions.style.cssText = "display:flex; gap:6px; align-items:center;";
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-success edit-question-btn';
+            editBtn.style.cssText = "padding:4px 8px; font-size:11px; margin:0; flex-shrink:0;";
+            editBtn.setAttribute('data-id', String(q.id));
+            editBtn.textContent = 'Edytuj';
+            actions.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger delete-question-btn';
+            deleteBtn.style.cssText = "padding:4px 8px; font-size:11px; margin:0; flex-shrink:0;";
+            deleteBtn.setAttribute('data-id', String(q.id));
+            deleteBtn.textContent = 'Usuń';
+            actions.appendChild(deleteBtn);
+
+            row.appendChild(actions);
+            list.appendChild(row);
+        });
+        await updateBadges();
+    }
+
+    function loadQuestionForEdit(id) {
+        let q = db.find(x => String(x.id) === String(id));
+        if(!q) return alert('Nie znaleziono pytania.');
+        editingQuestionId = q.id;
+        document.getElementById('edit-cat').value = q.category || '';
+        document.getElementById('edit-q').value = q.question || '';
+        document.getElementById('edit-exp').value = q.explanation || '';
+        for(let i=0;i<4;i++){
+            let opt = q.options[i] ? q.options[i].text : '';
+            let isCorrect = q.options[i] ? !!q.options[i].isCorrect : false;
+            document.getElementById('opt-' + i).value = opt;
+            document.querySelectorAll('input[name="correct-opt"]')[i].checked = isCorrect;
+        }
+        document.getElementById('cancel-edit-btn').classList.remove('hidden');
+        const saveBtn = document.querySelector('[data-action="save-question"]');
+        if(saveBtn) saveBtn.innerText = 'Zapisz zmiany';
+        switchTab('editor');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEditing() {
+        editingQuestionId = null;
+        document.getElementById('edit-cat').value = 'IEC 62443-4-2 / Component Requirements';
+        document.getElementById('edit-q').value = '';
+        document.getElementById('edit-exp').value = '';
+        document.getElementById('cancel-edit-btn').classList.add('hidden');
+        const saveBtn = document.querySelector('[data-action="save-question"]');
+        if(saveBtn) saveBtn.innerText = 'Zapisz pytanie do bazy';
+    }
+
+    function exportData() {
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+        let downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "fiszki_backup.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    async function exportFullBackup() {
+        const payload = await buildCloudPayload();
+        const dataStr = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.href = dataStr;
+        downloadAnchor.download = `fiszki_pelny_backup_${getTodayDateKey()}.json`;
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importFullBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(readEvent) {
+            try {
+                const payload = JSON.parse(readEvent.target.result);
+                if (!Array.isArray(payload?.decks) || !Array.isArray(payload?.meta) || !Array.isArray(payload?.sessions)) {
+                    throw new Error('Niepoprawny format pełnej kopii zapasowej.');
+                }
+                if (!confirm('Przywrócenie pełnego backupu zastąpi wszystkie lokalne biblioteki i postępy. Kontynuować?')) {
+                    return;
+                }
+                await applyCloudPayload(payload);
+                alert('Pełna kopia zapasowa została przywrócona.');
+            } catch (error) {
+                alert(`Nie udało się przywrócić pełnego backupu: ${error.message || error}`);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function normalizeImportedQuestions(importedData, sourceSetId = null) {
+        let questions = [];
+        if (Array.isArray(importedData)) {
+            questions = importedData;
+        } else if (importedData && Array.isArray(importedData.questions)) {
+            questions = importedData.questions;
+        }
+
+        if (!Array.isArray(questions)) return [];
+
+        const existingIds = new Set(db.map(q => String(q.id)));
+        return questions.map((q) => {
+            const normalized = { ...q };
+            let baseId = String(normalized.id || '').trim();
+            if (!baseId) {
+                baseId = `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            }
+
+            let uniqueId = baseId;
+            let counter = 1;
+            while (existingIds.has(uniqueId)) {
+                uniqueId = `${baseId}_${counter}`;
+                counter += 1;
+            }
+            existingIds.add(uniqueId);
+            normalized.id = uniqueId;
+            normalized.sourceSetId = sourceSetId;
+            return sanitizeQuestionRecord(normalized);
+        });
+    }
+
+    async function deleteImportedSet(setId) {
+        const importSet = getImportedSets().find(set => set.id === setId);
+        if (!importSet) return;
+        if (!confirm(`Usunąć zestaw "${importSet.fileName}" oraz wszystkie jego pytania i postępy?`)) return;
+
+        const removedQuestionIds = new Set(db.filter(question => question.sourceSetId === setId).map(question => question.id));
+        if (removedQuestionIds.size === 0) {
+            const activeDeck = getActiveDeck();
+            activeDeck.importSets = getImportedSets().filter(set => set.id !== setId);
+            await persistDecks();
+            renderImportedSets();
+            return;
+        }
+
+        db = db.filter(question => !removedQuestionIds.has(question.id));
+        todayQueue = todayQueue.filter(question => !removedQuestionIds.has(question.id));
+        const activeDeck = getActiveDeck();
+        activeDeck.importSets = getImportedSets().filter(set => set.id !== setId);
+
+        const sessionPrefix = `session_${activeDeckId}_`;
+        await appDB.transaction('rw', appDB.sessions, async () => {
+            const sessions = await appDB.sessions.toArray();
+            for (const session of sessions) {
+                if (!String(session.key).startsWith(sessionPrefix)) continue;
+                ['newIds', 'reviewIds', 'attemptedIds', 'correctIds', 'wrongIds', 'reviewAttemptedIds'].forEach((field) => {
+                    if (Array.isArray(session[field])) session[field] = session[field].filter(id => !removedQuestionIds.has(id));
+                });
+                await appDB.sessions.put(session);
+            }
+        });
+
+        await persistDecks();
+        await buildQueue(false);
+        renderImportedSets();
+        alert(`Usunięto zestaw "${importSet.fileName}".`);
+    }
+
+    function importData(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                let importedDb = JSON.parse(e.target.result);
+                const importSet = {
+                    id: window.crypto.randomUUID ? window.crypto.randomUUID() : `set_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    fileName: file.name || 'Zestaw JSON',
+                    importedAt: new Date().toISOString(),
+                    questionCount: 0
+                };
+                let importedQuestions = normalizeImportedQuestions(importedDb, importSet.id);
+                if (importedQuestions.length > 0) {
+                    importSet.questionCount = importedQuestions.length;
+                    db = [...db, ...importedQuestions];
+                    const activeDeck = getActiveDeck();
+                    activeDeck.importSets = [...getImportedSets(), importSet];
+                    await saveToStorage();
+                    // grow today's pool with newly imported candidates instead of wiping already-answered progress
+                    await adjustQueueForSettings();
+                    renderImportedSets();
+                    alert("Import ukończony pomyślnie!");
+                } else {
+                    alert("Błąd pliku JSON. Brak poprawnych pytań do importu.");
+                }
+            } catch(err) { alert("Błąd pliku JSON."); }
+            finally { event.target.value = ''; }
+        };
+        reader.readAsText(file);
+    }
+</script>
+</body>
+</html>
